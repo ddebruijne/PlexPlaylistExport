@@ -1,3 +1,4 @@
+#!venv/bin/python
 """This script exports Plex Playlists into the M3U format.
 
 The script is designed in such a way that it only creates the M3U file
