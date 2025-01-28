@@ -1,12 +1,16 @@
 #!/bin/bash
 
+scriptFilePath=$(realpath "$0")
+scriptDirectory=$(dirname "$scriptFilePath")
+
 # Check if an argument is provided
 if [ -z "$1" ]; then
     echo "No input provided. please pass in the plex token."
     exit 1
 fi
-
 token=$1
+
+exportMusicDir="Lidarr"
 playlistfolder="/run/user/1000/gvfs/smb-share:server=192.168.103.7,share=media/Music/Playlists"
 playlists=( # Maybe replace this with a --list, save to file, then read all playlist for uber automatic export
     "Persona"
@@ -27,15 +31,26 @@ for item in "${playlists[@]}"; do
         --replace-with-dir ".."
 done
 
-# dumb rename, ascii-ify didnt work very well for me
-old_ext="m3u8"
-new_ext="m3u"
-for file in "out"/*."$old_ext"; do
-    [ -e "$file" ] || continue
-    new_file="${file%.$old_ext}.$new_ext"
-    mv "$file" "$new_file"
-    echo "Renamed: '$file' -> '$new_file'"
-done
+## NOTE the commented stuff is only here for some folks.
+## Beet renames files, so it wasnt useful for me :( 
+## ill stick to copying as much of the library over as I can.
+
+## dumb rename, ascii-ify didnt work very well for me
+# old_ext="m3u8"
+# new_ext="m3u"
+# for file in "out"/*."$old_ext"; do
+#     [ -e "$file" ] || continue
+#     new_file="${file%.$old_ext}.$new_ext"
+#     cp "$file" "$new_file"
+#     echo "Copied: '$file' -> '$new_file'"
+# done
 
 echo "Copying playlists to $playlistfolder"
-cp out/* $playlistfolder/
+cp out/*.m3u8 $playlistfolder/
+
+## Export
+# mkdir -p $exportMusicDir
+# for file in "out"/*."$new_ext"; do
+#     [ -e "$file" ] || continue
+#     beet move -e -d $scriptDirectory/$exportMusicDir playlist:"$file"
+# done
