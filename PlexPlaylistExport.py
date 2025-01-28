@@ -177,11 +177,9 @@ def export_playlist(options: ExportOptions):
 def copy_file_if_newer(src, dst):
     if os.path.exists(dst):
         if os.path.getmtime(src) <= os.path.getmtime(dst):
-            print(f"Skipping: {dst} is up-to-date.")
             return
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     shutil.copy2(src, dst)
-    print(f"Copied: {src} to {dst}")
 
 def copy_file(src, dst):
     os.makedirs(os.path.dirname(dst), exist_ok=True)

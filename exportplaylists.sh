@@ -8,10 +8,9 @@ if [ -z "$1" ]; then
     echo "No input provided. please pass in the plex token."
     exit 1
 fi
-token=$1
 
-exportMusicDir="Lidarr"
-playlistfolder="/run/user/1000/gvfs/smb-share:server=192.168.103.7,share=media/Music/Playlists"
+token=$1
+playlistfolder="/run/media/danny/KINGSTON/Playlists/" # need trailing /
 playlists=( # Maybe replace this with a --list, save to file, then read all playlist for uber automatic export
     "Persona"
     "Final Fantasy XIV and XVI"
@@ -30,7 +29,7 @@ for item in "${playlists[@]}"; do
         --plex-music-root="/media/Music" \
         --replace-with-dir ".." \
         --fs-music-root "/run/user/1000/gvfs/smb-share:server=192.168.103.7,share=media/Music" \
-        --out-dir "Playlists/" 
+        --out-dir "$playlistfolder" 
 done
 
 ## NOTE the commented stuff is only here for some folks.
@@ -48,10 +47,11 @@ done
 # done
 
 echo "Copying playlists to $playlistfolder"
-cp Playlists/*.m3u8 $playlistfolder/
+cp Playlists/*.m3u8 $playlistfolder
 echo "Job's done!"
 
 ## Export
+# exportMusicDir="Lidarr"
 # mkdir -p $exportMusicDir
 # for file in "out"/*."$new_ext"; do
 #     [ -e "$file" ] || continue
