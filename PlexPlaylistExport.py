@@ -21,6 +21,7 @@ import plexapi
 import codecs
 from plexapi.server import PlexServer
 from unidecode import unidecode
+import os
 
 class ExportOptions():
     def __init__(self, args):
@@ -115,7 +116,16 @@ def export_playlist(options: ExportOptions):
     playlist_title = do_asciify(playlist.title) if options.asciify else playlist.title
     extension = "m3u" if options.asciify else "m3u8"
     encoding = "ascii" if options.asciify else "utf-8"
-    m3u = open('%s.%s' % (playlist_title, extension), 'w', encoding=encoding)
+    output_directory_name = "out"
+    playlist_output_filepath = '%s/%s.%s' % (output_directory_name, playlist_title, extension)
+
+    if not os.path.isdir(output_directory_name):
+        print(f"The directory {output_directory_name} does not exist. Creating it now...")
+        os.makedirs(output_directory_name)
+    else:
+        print(f"The directory {output_directory_name} already exists.")
+
+    m3u = open(playlist_output_filepath, 'w', encoding=encoding)
     m3u.write('#EXTM3U\n')
     m3u.write('#PLAYLIST:%s\n' % playlist_title)
     m3u.write('\n')
