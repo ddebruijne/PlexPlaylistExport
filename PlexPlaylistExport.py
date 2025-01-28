@@ -18,10 +18,10 @@ Requirements
 import argparse
 import requests
 import plexapi
-import codecs
+import shutil
+import os
 from plexapi.server import PlexServer
 from unidecode import unidecode
-import os
 
 class ExportOptions():
     def __init__(self, args):
@@ -33,6 +33,8 @@ class ExportOptions():
         self.writeAlbumArtist = args.write_album_artist
         self.plexMusicRoot = args.plex_music_root
         self.replaceWithDir = args.replace_with_dir
+        self.fsMusicRoot = args.fs_music_root
+        self.outDir = args.out_dir
         self.user = args.switch_user
         pass
 
@@ -116,14 +118,17 @@ def export_playlist(options: ExportOptions):
     playlist_title = do_asciify(playlist.title) if options.asciify else playlist.title
     extension = "m3u" if options.asciify else "m3u8"
     encoding = "ascii" if options.asciify else "utf-8"
-    output_directory_name = "out"
-    playlist_output_filepath = '%s/%s.%s' % (output_directory_name, playlist_title, extension)
+    playlist_output_filepath = '%s/%s.%s' % (options.outDir, playlist_title, extension)
+    if options.fsMusicRoot != '': 
+        filesToCopy = []
+        destinationPaths = []
+        titles = []
 
-    if not os.path.isdir(output_directory_name):
-        print(f"The directory {output_directory_name} does not exist. Creating it now...")
-        os.makedirs(output_directory_name)
+    if not os.path.isdir(options.outDir):
+        print(f"The directory {options.outDir} does not exist. Creating it now...")
+        os.makedirs(options.outDir)
     else:
-        print(f"The directory {output_directory_name} already exists.")
+        print(f"The directory {options.outDir} already exists.")
 
     m3u = open(playlist_output_filepath, 'w', encoding=encoding)
     m3u.write('#EXTM3U\n')
@@ -138,7 +143,9 @@ def export_playlist(options: ExportOptions):
     for item in items:    
         media = item.media[0]
         seconds = int(item.duration / 1000)
-        title = do_asciify(item.title) if options.asciify else item.title        
+        title = do_asciify(item.title) if options.asciify else item.title
+        if options.fsMusicRoot != '': 
+            titles.append(title)
         album = do_asciify(item.parentTitle) if options.asciify else item.parentTitle
         artist = do_asciify(item.originalTitle) if options.asciify else item.originalTitle
         albumArtist = do_asciify(item.grandparentTitle) if options.asciify else item.grandparentTitle
@@ -154,9 +161,31 @@ def export_playlist(options: ExportOptions):
             m3u.write('#EXTINF:%s,%s - %s\n' % (seconds, artist, title))
             m3u.write('%s\n' % part.file.replace(options.plexMusicRoot, options.replaceWithDir))
             m3u.write('\n')
+            if options.fsMusicRoot != '': 
+                filesToCopy.append('%s' % part.file.replace(options.plexMusicRoot, options.fsMusicRoot))
+                destinationPaths.append('%s%s' % (options.outDir, part.file.replace(options.plexMusicRoot, options.replaceWithDir)))
             
     m3u.close()
-    print(' done')
+    print('done')
+    
+    if options.fsMusicRoot != '': 
+        for i, value in enumerate(filesToCopy):
+            print('Copying %s --> %s' % (titles[i], destinationPaths[i]))
+            copy_file_if_newer(value, destinationPaths[i])
+
+
+def copy_file_if_newer(src, dst):
+    if os.path.exists(dst):
+        if os.path.getmtime(src) <= os.path.getmtime(dst):
+            print(f"Skipping: {dst} is up-to-date.")
+            return
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    shutil.copy2(src, dst)
+    print(f"Copied: {src} to {dst}")
+
+def copy_file(src, dst):
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    shutil.copy2(src, dst)  # Use copy2 to preserve metadata
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -208,6 +237,18 @@ def main():
         type = str,
         help = "The string which we replace the plex music library root dir with in the M3U. This could be a relative path for instance '..'.",
         default = '..'
+    )
+    parser.add_argument(
+        '--fs-music-root',
+        type = str,
+        help = "FILLME '..'.",
+        default = ''
+    )
+    parser.add_argument(
+        '--out-dir',
+        type = str,
+        help = "FILLME '..'.",
+        default = 'out/'
     )
     parser.add_argument(
         '-u', '--switch-user',

@@ -28,7 +28,9 @@ for item in "${playlists[@]}"; do
     ./PlexPlaylistExport.py --host http://plex.jn --token $token \
         --playlist "$item" \
         --plex-music-root="/media/Music" \
-        --replace-with-dir ".."
+        --replace-with-dir ".." \
+        --fs-music-root "/run/user/1000/gvfs/smb-share:server=192.168.103.7,share=media/Music" \
+        --out-dir "Playlists/" 
 done
 
 ## NOTE the commented stuff is only here for some folks.
@@ -46,7 +48,8 @@ done
 # done
 
 echo "Copying playlists to $playlistfolder"
-cp out/*.m3u8 $playlistfolder/
+cp Playlists/*.m3u8 $playlistfolder/
+echo "Job's done!"
 
 ## Export
 # mkdir -p $exportMusicDir
