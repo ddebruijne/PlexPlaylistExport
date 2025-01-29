@@ -158,7 +158,7 @@ def export_playlist(options: ExportOptions):
         if options.writeAlbumArtist:
             m3u.write('#EXTART:%s\n' % albumArtist)
         for part in parts:
-            m3u.write('#EXTINF:%s,%s - %s\n' % (seconds, artist, title))
+            m3u.write('#EXTINF:%s,%s\n' % (seconds, title))
             m3u.write('%s\n' % part.file.replace(options.plexMusicRoot, options.replaceWithDir))
             m3u.write('\n')
             if options.fsMusicRoot != '': 

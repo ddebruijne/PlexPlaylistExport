@@ -46,8 +46,6 @@ done
 #     echo "Copied: '$file' -> '$new_file'"
 # done
 
-echo "Copying playlists to $playlistfolder"
-cp Playlists/*.m3u8 $playlistfolder
 echo "Job's done!"
 
 ## Export
