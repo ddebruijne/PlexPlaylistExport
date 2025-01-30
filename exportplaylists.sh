@@ -33,6 +33,8 @@ for item in "${playlists[@]}"; do
         --out-dir "$playlistfolder" 
 done
 
+./ParseAlbumArt.py
+
 ## NOTE the commented stuff is only here for some folks.
 ## Beet renames files, so it wasnt useful for me :( 
 ## ill stick to copying as much of the library over as I can.
