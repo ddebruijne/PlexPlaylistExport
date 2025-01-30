@@ -159,11 +159,13 @@ def export_playlist(options: ExportOptions):
             m3u.write('#EXTART:%s\n' % albumArtist)
         for part in parts:
             m3u.write('#EXTINF:%s,%s\n' % (seconds, title))
-            m3u.write('%s\n' % part.file.replace(options.plexMusicRoot, options.replaceWithDir))
+            fullpathm3u = '%s\n' % part.file.replace(options.plexMusicRoot, options.replaceWithDir)
+            m3u.write(rename_filename_keep_extension(fullpathm3u, title))
             m3u.write('\n')
             if options.fsMusicRoot != '': 
                 filesToCopy.append('%s' % part.file.replace(options.plexMusicRoot, options.fsMusicRoot))
-                destinationPaths.append('%s%s' % (options.outDir, part.file.replace(options.plexMusicRoot, options.replaceWithDir)))
+                fullpathdest = '%s%s' % (options.outDir, part.file.replace(options.plexMusicRoot, options.replaceWithDir))
+                destinationPaths.append(rename_filename_keep_extension(fullpathdest, title))
             
     m3u.close()
     print('done')
@@ -181,9 +183,21 @@ def copy_file_if_newer(src, dst):
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     shutil.copy2(src, dst)
 
-def copy_file(src, dst):
-    os.makedirs(os.path.dirname(dst), exist_ok=True)
-    shutil.copy2(src, dst)  # Use copy2 to preserve metadata
+# on disk
+def rename_file_keep_extension(file_path, new_name):
+    directory, old_filename = os.path.split(file_path)
+    name, extension = os.path.splitext(old_filename)
+    new_filename = new_name + extension
+    new_path = os.path.join(directory, new_filename)
+    
+    os.rename(file_path, new_path)
+    return new_path
+
+# by string
+def rename_filename_keep_extension(file_path, new_name):
+    directory, old_filename = os.path.split(file_path)
+    _, extension = os.path.splitext(old_filename)
+    return os.path.join(directory, new_name + extension)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
