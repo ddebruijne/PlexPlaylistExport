@@ -21,6 +21,8 @@ from mutagen.mp4 import MP4Cover
 from mutagen.oggvorbis import OggVorbis
 from PIL import Image
 import io
+import ffmpeg
+
 
 # Supported audio extensions
 AUDIO_EXTENSIONS = {".flac", ".m4a", ".mp3", ".wav"}
@@ -44,6 +46,21 @@ def process_image(image_data):
         img.save(output, format="JPEG", quality=85, progressive=False)
         return output.getvalue()
 
+def downsample_flac(input_file):
+    temp_file = input_file + '.temp.flac'
+
+    try:
+        # Downsample to 16-bit and 44.1kHz, writing to a temporary file
+        ffmpeg.input(input_file).output(temp_file, acodec='flac', ar='44100', sample_fmt='s16').run()
+
+        # Replace the original file with the downsampled one
+        os.replace(temp_file, input_file)
+        print(f"Successfully downsampled and replaced {input_file}")
+    except ffmpeg.Error as e:
+        print(f"Error processing file: {e}")
+        if os.path.exists(temp_file):
+            os.remove(temp_file)  # Clean up the temp file in case of error
+
 def process_audio_file(filepath):
     """Process an audio file and update album art if necessary"""
     ext = os.path.splitext(filepath)[1].lower()
@@ -57,6 +74,7 @@ def process_audio_file(filepath):
             )
             audio.save()
     elif ext == ".flac":
+        #downsample_flac(filepath)
         audio = FLAC(filepath)
         if audio.pictures:
             new_art = process_image(audio.pictures[0].data)

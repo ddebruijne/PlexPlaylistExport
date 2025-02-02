@@ -6,3 +6,4 @@ pip install plexapi
 pip install unidecode
 pip install mutagen
 pip install pillow
+pip install ffmpeg-python
