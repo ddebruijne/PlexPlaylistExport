@@ -10,8 +10,8 @@ if [ -z "$1" ]; then
 fi
 
 token=$1
-#playlistfolder="/run/media/danny/KINGSTON/Playlists/" # need trailing /
-playlistfolder="out/Playlists/"
+playlistfolder="/run/media/danny/SICKTUNES/Playlists/" # need trailing /
+#playlistfolder="out/Playlists/"
 playlists=( # Maybe replace this with a --list, save to file, then read all playlist for uber automatic export
     "Persona"
     "Final Fantasy XIV and XVI"
@@ -21,8 +21,15 @@ playlists=( # Maybe replace this with a --list, save to file, then read all play
     "Monster Hunter"
     "The Best OSTs"
     "All Time Favorites v2"
+    "Neerlandsch"
     "Z_AlbumDownloader"
 )
+
+fsMusicRoot="/run/user/1000/gvfs/smb-share:server=192.168.103.7,share=media/Music/Lidarr"
+if [ ! -d "$fsMusicRoot" ]; then
+    echo "Error: Folder '$fsMusicRoot' does not exist."
+    exit 1
+fi
 
 # parse all plists
 for item in "${playlists[@]}"; do
@@ -31,7 +38,7 @@ for item in "${playlists[@]}"; do
         --playlist "$item" \
         --plex-music-root="/media/Music/Lidarr" \
         --replace-with-dir "../Music" \
-        --fs-music-root "/run/user/1000/gvfs/smb-share:server=192.168.103.7,share=media/Music/Lidarr" \
+        --fs-music-root "$fsMusicRoot" \
         --out-dir "$playlistfolder" 
 done
 
