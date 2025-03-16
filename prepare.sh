@@ -8,3 +8,5 @@ pip install mutagen
 pip install pillow
 pip install ffmpeg-python
 pip install ffmpeg
+pip install pydub
+pip install audioop-lts

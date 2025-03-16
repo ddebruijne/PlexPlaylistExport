@@ -4,6 +4,8 @@
 # DISKNAME: name of the mounted volume.
 
 set -e
+SECONDS=0  # Start the timer
+
 scriptFilePath=$(realpath "$0")
 scriptDirectory=$(dirname "$scriptFilePath")
 
@@ -12,14 +14,14 @@ if [ -z "$1" ]; then
     echo "No plex token provided. Usage: ./exportplaylits.sh TOKEN DISKNAME"
     exit 1
 fi
+token=$1
 
 if [ -z "$2" ]; then
-    echo "No disk name provided. Usage: ./exportplaylits.sh TOKEN DISKNAME"
-    exit 1
+    playlistfolder="$scriptDirectory/out/Playlists/"
+else
+    playlistfolder="/run/media/$USER/$2/Playlists/" # need trailing /
 fi
 
-token=$1
-playlistfolder="/run/media/$USER/$2/Playlists/" # need trailing /
 playlists=(
     "Persona"
     "Final Fantasy XIV and XVI"
@@ -59,4 +61,6 @@ for item in "${playlists[@]}"; do
 done
 
 python3 ParseAlbumArt.py "$playlistfolder../Music"
-echo "Jobs done!"
+echo ""
+python3 Normalize.py "$playlistfolder../Music"
+echo "Jobs done! Took $SECONDS seconds."

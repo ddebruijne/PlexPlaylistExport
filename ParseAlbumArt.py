@@ -40,7 +40,7 @@ def process_image(image_data):
     (width, height), img_format, is_progressive = get_image_dimensions_format_and_progressive(image_data)
     
     if max(width, height) <= MAX_SIZE and img_format == "JPEG" and not is_progressive:
-        print(" Skipped!")
+        print(" OK!")
         return image_data  # Skip processing if already within limits and baseline JPEG
     
     with Image.open(io.BytesIO(image_data)) as img:
@@ -48,22 +48,8 @@ def process_image(image_data):
         img.thumbnail((MAX_SIZE, MAX_SIZE))
         output = io.BytesIO()
         img.save(output, format="JPEG", quality=85, progressive=False)
-        print(" Converted!")
+        print(" Converted.")
         return output.getvalue()
-
-def downsample_flac(input_file):
-    temp_file = input_file + '.temp.flac'
-    try:
-        # Downsample to 16-bit and 44.1kHz, writing to a temporary file
-        ffmpeg.input(input_file).output(temp_file, acodec='flac', ar='44100', sample_fmt='s16').run()
-
-        # Replace the original file with the downsampled one
-        os.replace(temp_file, input_file)
-        print(f"Successfully downsampled and replaced {input_file}")
-    except ffmpeg.Error as e:
-        print(f"Error processing file: {e}")
-        if os.path.exists(temp_file):
-            os.remove(temp_file)  # Clean up the temp file in case of error
 
 def process_audio_file(filepath):
     """Process an audio file and update album art if necessary"""
@@ -79,9 +65,8 @@ def process_audio_file(filepath):
                 )
                 audio.save()
         else:
-            print(" MP3 Tag was not AIPC! Skipped.")
+            print(" No album art.")
     elif ext == ".flac":
-        #downsample_flac(filepath)
         audio = FLAC(filepath)
         if audio.pictures:
             new_art = process_image(audio.pictures[0].data)
@@ -89,6 +74,8 @@ def process_audio_file(filepath):
                 audio.pictures[0].data = new_art
                 audio.pictures[0].mime = "image/jpeg"
                 audio.save()
+        else:
+            print(" No album art.")
     elif ext == ".m4a":
         audio = MP4(filepath)
         if "covr" in audio.tags:
@@ -96,8 +83,10 @@ def process_audio_file(filepath):
             if new_art != audio.tags["covr"][0]:
                 audio.tags["covr"] = [MP4Cover(new_art, imageformat=MP4Cover.FORMAT_JPEG)]
                 audio.save()
+        else:
+            print(" No album art.")
     elif ext == ".wav":
-        print(f" Skipping WAV file (no standard embedded artwork support): {filepath}")
+        print(f" Skipping WAV file (no standard embedded artwork support)")
 
 def process_folder(root_folder):
     """Recursively process all audio files in a folder"""
