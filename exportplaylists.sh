@@ -9,12 +9,18 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
+if [ -z "$2" ]; then
+    echo "No input provided. please pass in he device name."
+    exit 1
+fi
+
 token=$1
-playlistfolder="/run/media/danny/SICKTUNES/Playlists/" # need trailing /
+playlistfolder="/run/media/danny/$2/Playlists/" # need trailing /
 #playlistfolder="out/Playlists/"
 playlists=( # Maybe replace this with a --list, save to file, then read all playlist for uber automatic export
     "Persona"
     "Final Fantasy XIV and XVI"
+    "City Pop"
     "Songe"
     "NieR"
     "prime weeb shit"

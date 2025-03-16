@@ -143,9 +143,9 @@ def export_playlist(options: ExportOptions):
     for item in items:    
         media = item.media[0]
         seconds = int(item.duration / 1000)
-        title = do_asciify(item.title) if options.asciify else item.title
+        title = item.title.replace(':', '_').replace('/', '_')
         if options.fsMusicRoot != '': 
-            titles.append(title.replace(':', '_'))
+            titles.append(title)
         album = do_asciify(item.parentTitle) if options.asciify else item.parentTitle
         artist = do_asciify(item.originalTitle) if options.asciify else item.originalTitle
         albumArtist = do_asciify(item.grandparentTitle) if options.asciify else item.grandparentTitle
