@@ -1,23 +1,26 @@
 #!/bin/bash
+# example usage: ./exportplaylits.sh TOKEN DISKNAME
+# TOKEN: comes from plex, if you view details on an item, then xml, the last param in the url is the token
+# DISKNAME: name of the mounted volume.
 
+set -e
 scriptFilePath=$(realpath "$0")
 scriptDirectory=$(dirname "$scriptFilePath")
 
 # Check if an argument is provided
 if [ -z "$1" ]; then
-    echo "No input provided. please pass in the plex token."
+    echo "No plex token provided. Usage: ./exportplaylits.sh TOKEN DISKNAME"
     exit 1
 fi
 
 if [ -z "$2" ]; then
-    echo "No input provided. please pass in he device name."
+    echo "No disk name provided. Usage: ./exportplaylits.sh TOKEN DISKNAME"
     exit 1
 fi
 
 token=$1
-playlistfolder="/run/media/danny/$2/Playlists/" # need trailing /
-#playlistfolder="out/Playlists/"
-playlists=( # Maybe replace this with a --list, save to file, then read all playlist for uber automatic export
+playlistfolder="/run/media/$USER/$2/Playlists/" # need trailing /
+playlists=(
     "Persona"
     "Final Fantasy XIV and XVI"
     "City Pop"
@@ -26,6 +29,7 @@ playlists=( # Maybe replace this with a --list, save to file, then read all play
     "prime weeb shit"
     "Monster Hunter"
     "The Best OSTs"
+    "The anti-weeb"
     "All Time Favorites v2"
     "Neerlandsch"
     "Z_AlbumDownloader"
@@ -37,16 +41,22 @@ if [ ! -d "$fsMusicRoot" ]; then
     exit 1
 fi
 
+source venv/bin/activate
+
 # parse all plists
+total_playlists=${#playlists[@]}
+counter=1
 for item in "${playlists[@]}"; do
-    echo "Parsing $item"
-    ./PlexPlaylistExport.py --host http://plex.jn --token $token \
+    echo "[$counter/$total_playlists] Parsing $item"
+    python3 PlexPlaylistExport.py --host http://plex.jn --token $token \
         --playlist "$item" \
         --plex-music-root="/media/Music/Lidarr" \
         --replace-with-dir "../Music" \
         --fs-music-root "$fsMusicRoot" \
         --out-dir "$playlistfolder" 
+    echo " "
+    ((counter++))
 done
 
-./ParseAlbumArt.py
-echo "Job's done!"
+python3 ParseAlbumArt.py "$playlistfolder../Music"
+echo "Jobs done!"

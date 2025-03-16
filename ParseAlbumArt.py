@@ -12,13 +12,12 @@
 #     Quality is set to 85 to balance file size and quality.
 
 import os
-import mutagen
+import sys
 from mutagen.mp3 import MP3
 from mutagen.flac import FLAC
 from mutagen.mp4 import MP4
 from mutagen.id3 import ID3, APIC
 from mutagen.mp4 import MP4Cover
-from mutagen.oggvorbis import OggVorbis
 from PIL import Image
 import io
 import ffmpeg
@@ -30,25 +29,30 @@ AUDIO_EXTENSIONS = {".flac", ".m4a", ".mp3", ".wav"}
 # Max size for artwork
 MAX_SIZE = 512
 
+def get_image_dimensions_format_and_progressive(image_data):
+    """Extract image dimensions, format, and check if JPEG is progressive."""
+    with Image.open(io.BytesIO(image_data)) as img:
+        is_progressive = "progressive" in img.info
+        return img.size, img.format, is_progressive
+
 def process_image(image_data):
     """Convert image to baseline JPEG and resize if needed"""
+    (width, height), img_format, is_progressive = get_image_dimensions_format_and_progressive(image_data)
+    
+    if max(width, height) <= MAX_SIZE and img_format == "JPEG" and not is_progressive:
+        print(" Skipped!")
+        return image_data  # Skip processing if already within limits and baseline JPEG
+    
     with Image.open(io.BytesIO(image_data)) as img:
-        # Convert to RGB (in case of PNG/transparency)
         img = img.convert("RGB")
-        
-        # Resize maintaining aspect ratio
-        max_dim = max(img.size)
-        if max_dim > MAX_SIZE:
-            img.thumbnail((MAX_SIZE, MAX_SIZE))
-
-        # Save as baseline JPEG
+        img.thumbnail((MAX_SIZE, MAX_SIZE))
         output = io.BytesIO()
         img.save(output, format="JPEG", quality=85, progressive=False)
+        print(" Converted!")
         return output.getvalue()
 
 def downsample_flac(input_file):
     temp_file = input_file + '.temp.flac'
-
     try:
         # Downsample to 16-bit and 44.1kHz, writing to a temporary file
         ffmpeg.input(input_file).output(temp_file, acodec='flac', ar='44100', sample_fmt='s16').run()
@@ -69,36 +73,50 @@ def process_audio_file(filepath):
         if audio.tags and "APIC:" in audio.tags:
             apic = audio.tags["APIC:"]
             new_art = process_image(apic.data)
-            audio.tags["APIC:"] = APIC(
-                encoding=3, mime="image/jpeg", type=3, desc="Cover", data=new_art
-            )
-            audio.save()
+            if new_art != apic.data:
+                audio.tags["APIC:"] = APIC(
+                    encoding=3, mime="image/jpeg", type=3, desc="Cover", data=new_art
+                )
+                audio.save()
+        else:
+            print(" MP3 Tag was not AIPC! Skipped.")
     elif ext == ".flac":
         #downsample_flac(filepath)
         audio = FLAC(filepath)
         if audio.pictures:
             new_art = process_image(audio.pictures[0].data)
-            audio.pictures[0].data = new_art
-            audio.pictures[0].mime = "image/jpeg"
-            audio.save()
+            if new_art != audio.pictures[0].data:
+                audio.pictures[0].data = new_art
+                audio.pictures[0].mime = "image/jpeg"
+                audio.save()
     elif ext == ".m4a":
         audio = MP4(filepath)
         if "covr" in audio.tags:
             new_art = process_image(audio.tags["covr"][0])
-            audio.tags["covr"] = [MP4Cover(new_art, imageformat=MP4Cover.FORMAT_JPEG)]
-            audio.save()
+            if new_art != audio.tags["covr"][0]:
+                audio.tags["covr"] = [MP4Cover(new_art, imageformat=MP4Cover.FORMAT_JPEG)]
+                audio.save()
     elif ext == ".wav":
-        print(f"Skipping WAV file (no standard embedded artwork support): {filepath}")
+        print(f" Skipping WAV file (no standard embedded artwork support): {filepath}")
 
 def process_folder(root_folder):
     """Recursively process all audio files in a folder"""
+    print("Checking album art:")
     for root, _, files in os.walk(root_folder):
         for file in files:
             if os.path.splitext(file)[1].lower() in AUDIO_EXTENSIONS:
+                print(f"- {file}...", end='', flush=True)
                 filepath = os.path.join(root, file)
-                print(f"Processing: {filepath}")
                 process_audio_file(filepath)
 
-# Set your folder path
-music_folder = "out/"
-process_folder(music_folder)
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        music_folder = sys.argv[1]
+    else:
+        music_folder = input("Enter the music folder path: ").strip()
+    
+    if not os.path.isdir(music_folder):
+        print("Error: Provided path is not a valid directory.")
+        sys.exit(1)
+    
+    process_folder(music_folder)

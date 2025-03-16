@@ -1,3 +1,23 @@
+# PlexPlayListExport - Fork
+Yeah so... this works pretty different now from the base code.
+I tried making beets work but I'm using Plex as my source-of-truth media library, so I ended up not using it.
+Instead, here we are directly copying to a target file system and just making sure the file paths align with what's in the m3u
+
+#### Some notes:
+- This was only tested on Linux with Gnome, your mount points may be different.
+- It was optimized for use with an iPod running Rockbox and Mazda Connect infotainment system (the more recent one with the minimalist UI)
+- I mostly try to aim for FLAC support, with MP3 as extra. WAVs should work too but they are picky with album art.
+
+#### Instead, the workflow is now as follows:
+1. On a fresh clone of this repo, call `./prepare.sh` to set up a venv for python, so we don't pollute our base system.
+2. Modify `exportplaylists.sh` to set your playlist names
+3. Run `exportplaylists.sh TOKEN DRIVE_NAME` - token being the plex token described below, and drive name being the name of your flash drive. 
+
+this should make updating your flash drive a one-command experience.
+
+### Album Art
+There's an additional script called `ParseAlbumArt.py` which processes all album art to 512x512 because apparently Mazda's infotainment system acts up if its larger than that, and not baseline JPEG (?). You can probably leave this out.
+
 # PlexPlaylistExport
 
 A small python script to export *music* playlists created on a [Plex](https://www.plex.tv/) media server to the M3U format for use

@@ -127,8 +127,6 @@ def export_playlist(options: ExportOptions):
     if not os.path.isdir(options.outDir):
         print(f"The directory {options.outDir} does not exist. Creating it now...")
         os.makedirs(options.outDir)
-    else:
-        print(f"The directory {options.outDir} already exists.")
 
     m3u = open(playlist_output_filepath, 'w', encoding=encoding)
     m3u.write('#EXTM3U\n')
@@ -168,20 +166,46 @@ def export_playlist(options: ExportOptions):
                 destinationPaths.append(rename_filename_keep_extension(fullpathdest, title))
             
     m3u.close()
-    print('done')
+    print(' done')
     
+    print('Copying files:')
     if options.fsMusicRoot != '': 
         for i, value in enumerate(filesToCopy):
-            print('Copying %s --> %s' % (titles[i], destinationPaths[i]))
-            copy_file_if_newer(value, destinationPaths[i])
+            print("[%i/%i] %s..." % (i+1, len(filesToCopy), titles[i]), end='', flush=True)
+            if copy_file_if_newer(value, destinationPaths[i]): 
+                print(' Copied!')
+            else:
+                print(' Skipped!')  
 
+def get_minute_rounded_mtime(filepath):
+    """Get the file modification time rounded to the nearest minute."""
+    return int(os.path.getmtime(filepath) // 60)  # Round down to minute precision
 
 def copy_file_if_newer(src, dst):
+    if not os.path.exists(src):
+        raise FileNotFoundError(f"Source file does not exist: {src}")
+    
     if os.path.exists(dst):
-        if os.path.getmtime(src) <= os.path.getmtime(dst):
-            return
+        src_mtime = get_minute_rounded_mtime(src)
+        dst_mtime = get_minute_rounded_mtime(dst)
+
+        if src_mtime <= dst_mtime:
+            return False  # No need to copy
+
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    shutil.copy2(src, dst)  # Copies metadata including timestamps
+    return True  # File was copied
+
+def copy_file_if_not_exists(src, dst):
+    if os.path.exists(dst):
+        return False
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     shutil.copy2(src, dst)
+    return True
+
+def copy_modification_time(src, dst):
+    mod_time = os.path.getmtime(src)
+    os.utime(dst, (mod_time, mod_time))
 
 # on disk
 def rename_file_keep_extension(file_path, new_name):
