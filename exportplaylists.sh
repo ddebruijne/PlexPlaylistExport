@@ -30,7 +30,6 @@ playlists=(
     "NieR"
     "prime weeb shit"
     "Monster Hunter"
-    "The Best OSTs"
     "The anti-weeb"
     "All Time Favorites v2"
     "Neerlandsch"

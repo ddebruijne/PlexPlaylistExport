@@ -36,7 +36,7 @@ def get_median_loudness(directory, audio_extensions=('.mp3', '.flac')):
         raise ValueError("No audio files found in the specified directory.")
 
     # Process files concurrently
-    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         results = executor.map(process_loudness, files)
 
     # Gather results and filter out any None values
@@ -134,7 +134,7 @@ def normalize_volume(directory, target_dBFS=None, tolerance_dB=2.0, audio_extens
                 files.append(os.path.join(root, file))
 
     # Process files concurrently
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         executor.map(lambda f: process_normalization(f, target_dBFS, tolerance_dB), files)
 
 

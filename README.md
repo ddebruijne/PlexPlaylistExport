@@ -7,19 +7,29 @@ Instead, here we are directly copying to a target file system and just making su
 - This was only tested on Linux with Gnome, your mount points may be different.
 - It was optimized for use with an iPod running Rockbox and Mazda Connect infotainment system (the more recent one with the minimalist UI)
 - I mostly try to aim for FLAC support, with MP3 as extra. WAVs should work too but they are picky with album art.
+- Song names are changed to just the title, this is because some players don't read the title of the song if its defined in the playlist.
+  - Some characters are filtered here, but I'm assuming extended character support (EG `č` or `リ`)
 
-#### Instead, the workflow is now as follows:
+#### The workflow is now as follows:
 1. On a fresh clone of this repo, call `./prepare.sh` to set up a venv for python, so we don't pollute our base system.
 2. Modify `exportplaylists.sh` to set your playlist names
 3. Run `exportplaylists.sh TOKEN DRIVE_NAME` - token being the plex token described below, and drive name being the name of your flash drive. 
 
-this should make updating your flash drive a one-command experience.
+This should make updating your music player or flash drive a one-command experience 👌
 
 ### Album Art
-There's an additional script called `ParseAlbumArt.py` which processes all album art to 512x512 because apparently Mazda's infotainment system acts up if its larger than that, and not baseline JPEG (?). You can probably leave this out.
+There's an additional script called `ParseAlbumArt.py` which processes all album art to 512x512 because apparently Mazda's infotainment system acts up if its larger than that, and not baseline JPEG (?)
+
+It also prints which files do not have album art so it may be a handy list to refer to, if you want to correct that (MusicBrainz Picard is very handy for this)
+
+### Normalization
+`Normalize.py` is repsonsible for... normalizing files. Not all players support this so this was a welcome step to not have to adjust volume all the time.
+It only touches files you already copied, but it does require the album art scirpt to run before it, jpegs are expected.
+Processing files runs on multiple threads so if your target disk is slow (eg iPods are USB2), reduce the number. Maybe even set it to just 1.
+
+If you add a large number of files it may be worth deleting the library on the target disk, so the average loudness is correctly calculated.
 
 # PlexPlaylistExport
-
 A small python script to export *music* playlists created on a [Plex](https://www.plex.tv/) media server to the M3U format for use
 in external software (VLC, etc.) or hardware (MP3 players, Flash drives, Car infotainment systems, etc.) players.
 *The script only generates the M3U and does not actually export the media itself.* The export of the media itself is done using [beets](https://beets.readthedocs.io/en/stable/index.html).
