@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import statistics
 import concurrent.futures
 from pydub import AudioSegment
@@ -8,22 +9,44 @@ from mutagen.id3 import ID3, APIC
 from mutagen.mp4 import MP4
 from mutagen.flac import FLAC, Picture
 
-def process_loudness(file_path):
-    """Helper function to get dBFS of a single file."""
+def get_loudness_cache_path(directory):
+    return os.path.join(directory, "loudness_cache.json")
+
+def load_loudness_cache(directory):
+    cache_path = get_loudness_cache_path(directory)
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, "r") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            pass  # Ignore corrupt cache
+    return {}
+
+def save_loudness_cache(directory, cache):
+    cache_path = get_loudness_cache_path(directory)
+    with open(cache_path, "w") as f:
+        json.dump(cache, f, indent=2)
+
+def process_loudness(file_path, cache):
+    """Helper function to get dBFS of a single file, using cache if available."""
+    if file_path in cache:
+        print(".", end='', flush=True)
+        return cache[file_path]
     try:
         audio = AudioSegment.from_file(file_path)
-        print('.', end='', flush=True)
-        return audio.dBFS
+        loudness = audio.dBFS
+        cache[file_path] = loudness
+        print(".", end='', flush=True)
+        return loudness
     except Exception as e:
         print(f"Error processing {file_path}: {e}")
         return None
 
-def get_median_loudness(directory, audio_extensions=('.mp3', '.flac')):
-    """
-    Calculates the median loudness of all audio files in the directory (recursively) using multithreading.
-    """
-    print("Checking median loudness", end='', flush=True)
+def get_median_loudness(directory, audio_extensions=(".mp3", ".flac")):
+    """Calculates the median loudness of all audio files in the directory, using caching."""
+    print("Checking median loudness", end="", flush=True)
     dBFS_values = []
+    cache = load_loudness_cache(directory)
 
     # Collect all files
     files = []
@@ -37,60 +60,21 @@ def get_median_loudness(directory, audio_extensions=('.mp3', '.flac')):
 
     # Process files concurrently
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        results = executor.map(process_loudness, files)
+        results = executor.map(lambda f: process_loudness(f, cache), files)
 
     # Gather results and filter out any None values
     dBFS_values = [r for r in results if r is not None]
-    
+    save_loudness_cache(directory, cache)
+
     if not dBFS_values:
         raise ValueError("No valid audio files found or processed.")
 
     print(f" Done.")
-
     return statistics.median(dBFS_values)
 
-def extract_album_art(file_path):
-    audio_file = File(file_path, easy=False)
-    if isinstance(audio_file, ID3) and "APIC:" in audio_file:
-        return audio_file["APIC:"].data
-    elif isinstance(audio_file, MP4) and "covr" in audio_file:
-        return audio_file["covr"][0]
-    elif isinstance(audio_file, FLAC):
-        for picture in audio_file.pictures:
-            if picture.type == 3:
-                return picture.data
-    return None
-
-def extract_tags(file_path):
-    audio_file = File(file_path, easy=False)
-    return audio_file.tags if audio_file.tags else None
-
-def write_album_art_and_tags(file_path, album_art, tags):
-    audio_file = File(file_path, easy=False)
-    if audio_file.tags is None:
-        audio_file.add_tags()
-    if album_art:
-        if isinstance(audio_file, ID3):
-            audio_file.tags["APIC"] = APIC(encoding=3, mime="image/jpeg", type=3, desc="Cover", data=album_art)
-        elif isinstance(audio_file, MP4):
-            audio_file.tags["covr"] = [album_art]
-        elif isinstance(audio_file, FLAC):
-            picture = Picture()
-            picture.data = album_art
-            picture.type = 3
-            picture.mime = "image/jpeg"
-            audio_file.clear_pictures()
-            audio_file.add_picture(picture)
-    for key, value in tags.items():
-        audio_file.tags[key] = value
-    audio_file.save()
-
-
-def process_normalization(file_path, target_dBFS, tolerance_dB):
+def process_normalization(file_path, target_dBFS, tolerance_dB, cache):
     """Processes a single file: extracts metadata, normalizes volume, and restores metadata."""
     try:
-        album_art = extract_album_art(file_path)
-        tags = extract_tags(file_path)
         audio = AudioSegment.from_file(file_path)
         current_dBFS = audio.dBFS
 
@@ -111,17 +95,16 @@ def process_normalization(file_path, target_dBFS, tolerance_dB):
         adjusted_audio.export(file_path, format=format_)
         print(f"- {os.path.basename(file_path)} (dbfs={round(current_dBFS,3)})... Normalized.")
 
-        # Restore metadata
-        if album_art or tags:
-            write_album_art_and_tags(file_path, album_art, tags)
-
+        # Update cache
+        cache[file_path] = target_dBFS
+        save_loudness_cache(os.path.dirname(file_path), cache)
     except Exception as e:
         print(f"Error processing {file_path}: {e}")
 
-def normalize_volume(directory, target_dBFS=None, tolerance_dB=2.0, audio_extensions=('.mp3', '.flac')):
-    """
-    Normalizes the volume of all audio files in the directory using multithreading.
-    """
+def normalize_volume(directory, target_dBFS=None, tolerance_dB=2.0, audio_extensions=(".mp3", ".flac")):
+    """Normalizes the volume of all audio files in the directory using multithreading."""
+    cache = load_loudness_cache(directory)
+
     if target_dBFS is None:
         target_dBFS = get_median_loudness(directory, audio_extensions)
         print(f"Median loudness of files: {target_dBFS} dBFS")
@@ -135,8 +118,7 @@ def normalize_volume(directory, target_dBFS=None, tolerance_dB=2.0, audio_extens
 
     # Process files concurrently
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-        executor.map(lambda f: process_normalization(f, target_dBFS, tolerance_dB), files)
-
+        executor.map(lambda f: process_normalization(f, target_dBFS, tolerance_dB, cache), files)
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
