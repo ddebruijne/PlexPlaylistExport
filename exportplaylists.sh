@@ -33,6 +33,13 @@ playlists=(
     "The anti-weeb"
     "All Time Favorites v2"
     "Neerlandsch"
+    "Reol"
+    "Future Funk"
+    "Midnight Drive"
+    "Vaporwave"
+    "Norfolk"
+    "2025"
+    "Expedition 33"
     "Z_AlbumDownloader"
 )
 
@@ -49,7 +56,7 @@ total_playlists=${#playlists[@]}
 counter=1
 for item in "${playlists[@]}"; do
     echo "[$counter/$total_playlists] Parsing $item"
-    python3 PlexPlaylistExport.py --host http://plex.jn --token $token \
+    python3 PlexPlaylistExport.py --host http://plex.jn:32400 --token $token \
         --playlist "$item" \
         --plex-music-root="/media/Music/Lidarr" \
         --replace-with-dir "../Music" \
@@ -60,6 +67,6 @@ for item in "${playlists[@]}"; do
 done
 
 python3 ParseAlbumArt.py "$playlistfolder../Music"
-echo ""
-python3 Normalize.py "$playlistfolder../Music"
+# echo ""
+# python3 Normalize.py "$playlistfolder../Music"
 echo "Jobs done! Took $SECONDS seconds."
